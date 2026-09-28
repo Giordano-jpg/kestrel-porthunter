@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE nmaprun>
+<nmaprun scanner="nmap" args="nmap -T4 -sn -v --reason -oX ping.xml 10.10.0.0/29" start="1790608023" startstr="Mon Sep 28 17:07:03 2026" version="7.95" xmloutputversion="1.05">
+<verbose level="1"/>
+<debugging level="0"/>
+<host><status state="up" reason="arp-response" reason_ttl="0"/>
+<address addr="10.10.0.1" addrtype="ipv4"/>
+<address addr="aa:bb:cc:00:00:01" addrtype="mac" vendor="Cisco Systems"/>
+<hostnames>
+<hostname name="gw.empresa.local" type="PTR"/>
+</hostnames>
+<times srtt="1000" rttvar="5000" to="100000"/>
+</host>
+<host><status state="up" reason="arp-response" reason_ttl="0"/>
+<address addr="10.10.0.6" addrtype="ipv4"/>
+<address addr="AA:BB:CC:00:00:02" addrtype="mac" vendor="Dell"/>
+<hostnames>
+<hostname name="pc-juan.empresa.local" type="PTR"/>
+</hostnames>
+</host>
+<host><status state="down" reason="no-response" reason_ttl="0"/>
+<address addr="10.10.0.3" addrtype="ipv4"/>
+<hostnames>
+<hostname name="impresora-2p.empresa.local" type="PTR"/>
+</hostnames>
+</host>
+<host><status state="up" reason="echo-reply" reason_ttl="126"/>
+<address addr="10.10.0.5" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+</host>
+<runstats><finished time="1790608030" timestr="Mon Sep 28 17:07:10 2026" summary="Nmap done at Mon Sep 28 17:07:10 2026; 8 IP addresses (3 hosts up) scanned in 7.01 seconds" elapsed="7.01" exit="success"/><hosts up="3" down="5" total="8"/>
+</runstats>
+</nmaprun>

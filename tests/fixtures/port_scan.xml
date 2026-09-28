@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE nmaprun>
+<nmaprun scanner="nmap" args="nmap -T4 -sS -sU -p U:137,T:135,139,445,3389 --script nbstat --traceroute -oX ports.xml 10.10.0.6" start="1790611623" startstr="Mon Sep 28 18:07:03 2026" version="7.95" xmloutputversion="1.05">
+<scaninfo type="syn" protocol="tcp" numservices="4" services="135,139,445,3389"/>
+<scaninfo type="udp" protocol="udp" numservices="1" services="137"/>
+<verbose level="1"/>
+<debugging level="0"/>
+<taskprogress task="SYN Stealth Scan" time="1790611625" percent="50.00" remaining="2" etc="1790611627"/>
+<host starttime="1790611623" endtime="1790611640"><status state="up" reason="arp-response" reason_ttl="0"/>
+<address addr="10.10.0.6" addrtype="ipv4"/>
+<address addr="AA:BB:CC:00:00:02" addrtype="mac" vendor="Dell"/>
+<hostnames>
+<hostname name="pc-juan.empresa.local" type="PTR"/>
+</hostnames>
+<ports>
+<port protocol="tcp" portid="135"><state state="open" reason="syn-ack" reason_ttl="128"/><service name="msrpc" product="Microsoft Windows RPC" method="probed" conf="10"/></port>
+<port protocol="tcp" portid="139"><state state="closed" reason="reset" reason_ttl="128"/><service name="netbios-ssn" method="table" conf="3"/></port>
+<port protocol="tcp" portid="445"><state state="open" reason="syn-ack" reason_ttl="128"/><service name="microsoft-ds" method="table" conf="3"/></port>
+<port protocol="tcp" portid="3389"><state state="open" reason="syn-ack" reason_ttl="128"/><service name="ms-wbt-server" method="table" conf="3"/></port>
+<port protocol="udp" portid="137"><state state="open" reason="udp-response" reason_ttl="128"/><service name="netbios-ns" method="table" conf="3"/></port>
+</ports>
+<os><osmatch name="Microsoft Windows 10 1709 - 21H2" accuracy="97" line="1"/></os>
+<distance value="1"/>
+<hostscript><script id="nbstat" output="NetBIOS name: PC-JUAN, NetBIOS user: &lt;unknown&gt;, NetBIOS MAC: aa:bb:cc:00:00:02 (Dell)"/></hostscript>
+<trace>
+<hop ttl="1" ipaddr="10.10.0.6" rtt="0.80" host="pc-juan.empresa.local"/>
+</trace>
+</host>
+<runstats><finished time="1790611640" timestr="Mon Sep 28 18:07:20 2026" summary="Nmap done" elapsed="17.0" exit="success"/><hosts up="1" down="0" total="1"/>
+</runstats>
+</nmaprun>

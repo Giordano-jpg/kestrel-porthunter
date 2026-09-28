@@ -1,0 +1,372 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kestrel PortHunter</title>
+<link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand">
+      <img src="/static/favicon.svg" alt="" width="28" height="28">
+      <div><span>Kestrel</span><b>PortHunter</b></div>
+    </div>
+    <nav id="nav">
+      <a href="#panel" data-view="panel">Panel</a>
+      <a href="#hosts" data-view="hosts">Equipos</a>
+      <a href="#scan" data-view="scan">Escanear</a>
+      <a href="#jobs" data-view="jobs">Tareas <span class="badge" id="badge-jobs"></span></a>
+      <a href="#monitor" data-view="monitor">Monitor <span class="badge danger" id="badge-alerts"></span></a>
+      <a href="#settings" data-view="settings">Ajustes</a>
+    </nav>
+    <div class="side-foot" id="side-status"></div>
+  </aside>
+
+  <main>
+    <!-- ============================== PANEL ============================== -->
+    <section class="view" id="view-panel">
+      <header class="view-head">
+        <div><h1>Panel</h1><p class="muted">Dónde está cada equipo ahora mismo</p></div>
+      </header>
+
+      <div class="finder">
+        <input id="finder" type="search" autocomplete="off"
+               placeholder="Busca un equipo: nombre, IP (actual o antigua), MAC, fabricante o puerto (3389, ssh)…">
+        <div id="finder-results" class="finder-results"></div>
+      </div>
+
+      <div class="stats" id="stats"></div>
+
+      <div class="card">
+        <h2>Acción rápida</h2>
+        <div class="row wrap">
+          <input id="quick-target" class="grow" list="target-suggestions" placeholder="Red o rango, p. ej. 10.10.0.0/17">
+          <button data-quick="list" title="nmap -sL: nombres DNS de todo el rango, sin tocar los equipos">Listar nombres (-sL)</button>
+          <button data-quick="ping" title="nmap -sn: qué equipos responden ahora">Descubrir activos (-sn)</button>
+          <button data-quick="smart" class="primary" title="-sn y después puertos sólo de los activos">Inteligente: activos → puertos</button>
+        </div>
+        <div class="chips" id="quick-chips"></div>
+      </div>
+
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-head"><h2>Equipos vigilados</h2>
+            <a href="#hosts" class="small">Marca equipos con ★ en «Equipos»</a></div>
+          <div id="watched"></div>
+        </div>
+        <div class="card">
+          <div class="card-head"><h2>Tareas</h2><a href="#jobs" class="small">Ver todas</a></div>
+          <div id="panel-jobs"></div>
+        </div>
+      </div>
+      <div class="grid-2">
+        <div class="card">
+          <h2>Novedades</h2>
+          <div id="events" class="event-list"></div>
+        </div>
+        <div class="card">
+          <div class="card-head"><h2>Alertas de escaneo</h2><a href="#monitor" class="small">Monitor</a></div>
+          <div id="panel-alerts"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================== EQUIPOS ============================== -->
+    <section class="view" id="view-hosts">
+      <header class="view-head">
+        <div><h1>Equipos</h1><p class="muted">Inventario persistente: cada equipo se sigue aunque cambie de IP</p></div>
+        <div class="row">
+          <a class="btn" id="export-txt" href="/api/export/txt">Exportar TXT</a>
+          <a class="btn" id="export-csv" href="/api/export/csv">CSV</a>
+          <a class="btn" id="export-targets" href="/api/export/targets" title="Una IP por línea, para usar con nmap -iL">Lista de IPs</a>
+          <label class="btn">Importar…<input type="file" id="import-file" multiple hidden></label>
+        </div>
+      </header>
+
+      <div class="toolbar">
+        <input id="hosts-q" class="grow" type="search" autocomplete="off"
+               placeholder="Filtrar como con Ctrl+F: nombre, IP, MAC, fabricante, puerto, notas…">
+        <select id="hosts-status">
+          <option value="">Todos</option>
+          <option value="up">Activos</option>
+          <option value="down">No responden</option>
+          <option value="unknown">Sin comprobar</option>
+        </select>
+        <label class="check"><input type="checkbox" id="hosts-watched"> Vigilados</label>
+        <label class="check"><input type="checkbox" id="hosts-ports"> Con puertos abiertos</label>
+        <span id="hosts-count" class="muted"></span>
+      </div>
+
+      <div class="selection-bar hidden" id="selection-bar">
+        <b id="sel-count"></b>
+        <select id="sel-profile"></select>
+        <button id="sel-scan" class="primary">Escanear puertos</button>
+        <button id="sel-trace">Traceroute</button>
+        <button id="sel-watch">★ Vigilar</button>
+        <button id="sel-unwatch">Dejar de vigilar</button>
+        <button id="sel-clear" class="ghost">Quitar selección</button>
+      </div>
+
+      <div class="table-wrap">
+        <table class="table" id="hosts-table">
+          <thead><tr>
+            <th class="w-check"><input type="checkbox" id="sel-all" title="Seleccionar todos los visibles"></th>
+            <th class="w-star"></th>
+            <th>Nombre</th>
+            <th>IP actual</th>
+            <th>Estado</th>
+            <th>MAC / fabricante</th>
+            <th title="Saltos de red hasta el equipo">Dist.</th>
+            <th>Sistema</th>
+            <th>Puertos abiertos</th>
+            <th>Visto</th>
+          </tr></thead>
+          <tbody></tbody>
+        </table>
+        <div class="empty hidden" id="hosts-empty">
+          Aún no hay equipos. Ve a <a href="#scan">Escanear</a> e importa o lanza un escaneo de tu red
+          (o pulsa «Importar…» para cargar tus .txt antiguos de <code>nmap -sL</code>).
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================== ESCANEAR ============================== -->
+    <section class="view" id="view-scan">
+      <header class="view-head">
+        <div><h1>Escanear</h1><p class="muted">Todo se ejecuta con nmap; abajo ves el comando exacto</p></div>
+      </header>
+
+      <div class="grid-scan">
+        <form class="card" id="scan-form" autocomplete="off">
+          <label class="field">Objetivo
+            <input name="targets" id="scan-targets" list="target-suggestions" required
+                   placeholder="10.10.0.0/17 · 10.10.5.1-50 · pc-juan.empresa.local">
+          </label>
+          <div class="chips" id="scan-chips"></div>
+
+          <fieldset class="modes">
+            <legend>¿Qué quieres hacer?</legend>
+            <label class="mode"><input type="radio" name="kind" value="list">
+              <b>Listar nombres <code>-sL</code></b>
+              <span>Lo que hacías antes: pregunta al DNS el nombre de cada IP del rango. No envía nada a
+                los equipos, así que no sabe si están encendidos (puede haber nombres antiguos).</span></label>
+            <label class="mode"><input type="radio" name="kind" value="ping" checked>
+              <b>Descubrir activos <code>-sn</code></b>
+              <span>Qué equipos responden ahora (ARP en tu LAN, ping y sondas TCP fuera), con su nombre
+                y su MAC. Rápido incluso en una /17.</span></label>
+            <label class="mode"><input type="radio" name="kind" value="listping">
+              <b>Nombres + activos</b>
+              <span>Las dos cosas seguidas: nombres DNS de todo el rango y quién responde de verdad.</span></label>
+            <label class="mode"><input type="radio" name="kind" value="ports">
+              <b>Escanear puertos</b>
+              <span>Puertos de los objetivos indicados (mejor con IPs concretas o rangos pequeños).</span></label>
+            <label class="mode"><input type="radio" name="kind" value="smart">
+              <b>Inteligente: activos → puertos</b>
+              <span>Para redes grandes: primero descubre los activos y después escanea los puertos sólo de
+                ésos. En una /17 es muchísimo más rápido que escanear puertos en las 32.768 IPs.</span></label>
+            <label class="mode"><input type="radio" name="kind" value="custom">
+              <b>Personalizado</b>
+              <span>Tus propios argumentos de nmap (los resultados se guardan igual en el inventario).</span></label>
+          </fieldset>
+
+          <div class="opts">
+            <label class="field" data-for="ports smart">Perfil de puertos
+              <select name="profile" id="scan-profile"></select></label>
+            <label class="field" data-for="list ping listping ports smart custom">Velocidad
+              <select name="timing">
+                <option value="T2">T2 · lento / discreto</option>
+                <option value="T3">T3 · normal</option>
+                <option value="T4" selected>T4 · rápido (recomendado en LAN)</option>
+                <option value="T5">T5 · agresivo</option>
+              </select></label>
+            <label class="check" data-for="ping listping smart"><input type="checkbox" name="reinforced" checked>
+              Sondeo reforzado (encuentra equipos Windows con el firewall que ignora el ping)</label>
+            <label class="check" data-for="ports"><input type="checkbox" name="no_ping">
+              No comprobar si está vivo (<code>-Pn</code>)</label>
+            <label class="check" data-for="ping ports smart"><input type="checkbox" name="traceroute">
+              Traceroute: distancia en saltos y ruta (<code>--traceroute</code>)</label>
+            <label class="field" data-for="list ping listping ports smart custom">
+              <span data-extra-label>Argumentos extra</span>
+              <input name="extra_args" placeholder="p. ej. -p 22,80,443,3389 --open"></label>
+          </div>
+
+          <div class="cmd-preview">
+            <div class="muted small">Comando que se ejecutará</div>
+            <pre id="cmd-preview">—</pre>
+          </div>
+
+          <div class="row wrap">
+            <button type="submit" class="primary">▶ Ejecutar</button>
+            <input name="label" class="grow" placeholder="Nombre de la tarea (opcional)">
+          </div>
+
+          <details class="save-net">
+            <summary>Guardar como red y programar escaneos automáticos</summary>
+            <div class="row wrap">
+              <input id="net-name" class="grow" placeholder="Nombre, p. ej. Oficina planta 2">
+              <select id="net-interval">
+                <option value="0">Sólo manual</option>
+                <option value="15">Cada 15 min</option>
+                <option value="30">Cada 30 min</option>
+                <option value="60">Cada hora</option>
+                <option value="240">Cada 4 horas</option>
+                <option value="1440">Cada día</option>
+              </select>
+              <button type="button" id="net-save">Guardar red</button>
+            </div>
+            <p class="hint">Mientras la app esté abierta, repetirá el escaneo con este intervalo y el inventario
+              se mantendrá al día solo (IPs nuevas, equipos que dejan de responder, puertos que se abren…).</p>
+          </details>
+        </form>
+
+        <div class="stack">
+          <div class="card">
+            <h2>Redes guardadas</h2>
+            <div id="networks"></div>
+          </div>
+          <div class="card cheat">
+            <h2>Chuleta nmap</h2>
+            <dl>
+              <dt><code>-sL</code></dt><dd>Sólo lista objetivos y resuelve DNS inverso. No toca los equipos.</dd>
+              <dt><code>-sn</code></dt><dd>Descubrimiento de hosts sin escanear puertos.</dd>
+              <dt><code>-Pn</code></dt><dd>Da todos por vivos (útil si bloquean ping; mucho más lento en rangos).</dd>
+              <dt><code>-F</code> / <code>-p-</code></dt><dd>100 puertos más comunes / los 65535.</dd>
+              <dt><code>-sV</code></dt><dd>Detecta el servicio y su versión.</dd>
+              <dt><code>-O</code></dt><dd>Adivina el sistema operativo (necesita privilegios).</dd>
+              <dt><code>--traceroute</code></dt><dd>Ruta y saltos hasta el equipo (la «distancia» de Zenmap).</dd>
+              <dt><code>--open</code></dt><dd>Muestra sólo puertos abiertos.</dd>
+              <dt><code>-T4</code></dt><dd>Plantilla de tiempos rápida; <code>-T2</code> para ir despacio.</dd>
+              <dt><code>--script nbstat</code></dt><dd>Nombre NetBIOS de equipos Windows (sin DNS).</dd>
+            </dl>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================== TAREAS ============================== -->
+    <section class="view" id="view-jobs">
+      <header class="view-head">
+        <div><h1>Tareas</h1><p class="muted">Escaneos en cola, en curso y terminados</p></div>
+        <button id="jobs-clear" class="ghost">Limpiar terminadas</button>
+      </header>
+      <div class="table-wrap">
+        <table class="table" id="jobs-table">
+          <thead><tr><th>#</th><th>Tarea</th><th>Objetivo</th><th>Estado</th><th class="w-progress">Progreso</th>
+            <th>Inicio</th><th>Duración</th><th>Resultado</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <div class="card hidden" id="job-detail"></div>
+    </section>
+
+    <!-- ============================== MONITOR ============================== -->
+    <section class="view" id="view-monitor">
+      <header class="view-head">
+        <div><h1>Monitor</h1><p class="muted">¿Te están escaneando? Detecta escaneos contra este equipo y barridos en tu red</p></div>
+      </header>
+
+      <div class="notice warn hidden" id="monitor-unavailable"></div>
+
+      <div class="card">
+        <div class="row wrap">
+          <label class="field grow">Interfaz de red <select id="mon-iface"></select></label>
+          <label class="check"><input type="checkbox" id="mon-watch-all">
+            Analizar también tráfico entre otros equipos (modo promiscuo)</label>
+          <button id="mon-toggle" class="primary">Iniciar monitor</button>
+        </div>
+        <div id="mon-status" class="mon-status"></div>
+        <details>
+          <summary>Umbrales y lista blanca</summary>
+          <div class="grid-4">
+            <label class="field">Ventana (s) <input type="number" min="1" id="mon-window_seconds"></label>
+            <label class="field">Puertos TCP distintos <input type="number" min="2" id="mon-tcp_ports_threshold"></label>
+            <label class="field">Puertos UDP distintos <input type="number" min="2" id="mon-udp_ports_threshold"></label>
+            <label class="field">Paquetes NULL/FIN/XMAS <input type="number" min="1" id="mon-stealth_threshold"></label>
+            <label class="field">Equipos en barrido ARP/ping <input type="number" min="2" id="mon-sweep_hosts_threshold"></label>
+            <label class="field">Cerrar alerta tras (s) sin actividad <input type="number" min="5" id="mon-alert_cooldown_seconds"></label>
+            <label class="check"><input type="checkbox" id="mon-save_pcap"> Guardar .pcap de cada alerta</label>
+          </div>
+          <label class="field">Lista blanca (IPs que no generan alertas: tu router, tu servidor de monitorización…)
+            <textarea id="mon-whitelist" rows="2" placeholder="10.10.0.1, 10.10.0.20"></textarea></label>
+          <p class="hint">Se aplican al iniciar el monitor.</p>
+        </details>
+      </div>
+
+      <div class="card">
+        <div class="card-head"><h2>Alertas</h2>
+          <div class="row"><button id="alerts-ack" class="ghost">Marcar todas revisadas</button>
+            <button id="alerts-clear" class="ghost danger">Borrar</button></div></div>
+        <div class="table-wrap">
+          <table class="table" id="alerts-table">
+            <thead><tr><th></th><th>Tipo</th><th>Origen</th><th>Destino</th><th>Alcance</th><th>Paquetes</th>
+              <th>Detalle</th><th>Primera / última</th><th></th></tr></thead>
+            <tbody></tbody>
+          </table>
+          <div class="empty hidden" id="alerts-empty">Sin alertas.</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Intentos de conexión entrantes <span class="muted small">(lo que antes buscabas en Wireshark)</span></h2>
+        <div class="table-wrap">
+          <table class="table" id="inbound-table">
+            <thead><tr><th>Origen</th><th>Equipo</th><th>Intentos</th><th>Puertos distintos</th><th>Qué intentó</th><th>Última vez</th></tr></thead>
+            <tbody></tbody>
+          </table>
+          <div class="empty hidden" id="inbound-empty">Inicia el monitor para ver quién intenta conectarse a este equipo.</div>
+        </div>
+      </div>
+
+      <div class="card cheat">
+        <h2>Verlo en Wireshark</h2>
+        <dl>
+          <dt><code>tcp.flags.syn==1 &amp;&amp; tcp.flags.ack==0</code></dt><dd>Intentos de conexión (lo que genera un escaneo SYN o connect).</dd>
+          <dt><code>tcp.flags.syn==1 &amp;&amp; tcp.flags.ack==0 &amp;&amp; tcp.window_size==1024</code></dt><dd>Firma típica del escaneo SYN de nmap.</dd>
+          <dt><code>tcp.flags &amp; 0x3f == 0 || tcp.flags &amp; 0x3f == 0x29 || tcp.flags &amp; 0x3f == 1</code></dt><dd>Escaneos NULL, XMAS y FIN.</dd>
+          <dt><code>arp.opcode==1</code></dt><dd>Peticiones ARP (un barrido -sn en la LAN se ve como una ráfaga).</dd>
+          <dt><code>tcp.flags.reset==1 &amp;&amp; ip.src==TU_IP</code></dt><dd>Tus respuestas RST: puertos cerrados que alguien ha probado.</dd>
+          <dt>Estadísticas → Conversaciones</dt><dd>Un origen con cientos de conversaciones de 1–2 paquetes es un escaneo.</dd>
+        </dl>
+        <p class="hint">Cada alerta guarda un <code>.pcap</code> con los paquetes del origen para abrirlo en Wireshark.</p>
+      </div>
+    </section>
+
+    <!-- ============================== AJUSTES ============================== -->
+    <section class="view" id="view-settings">
+      <header class="view-head"><div><h1>Ajustes</h1></div></header>
+      <div class="grid-2">
+        <form class="card" id="settings-form" autocomplete="off">
+          <h2>General</h2>
+          <label class="field">Ruta de nmap <input name="nmap_path" placeholder="Vacío = autodetectar"></label>
+          <label class="field">Tareas en paralelo <input name="max_parallel_jobs" type="number" min="1" max="8"></label>
+          <label class="field">Servidores DNS para nombres (opcional)
+            <input name="dns_servers" placeholder="p. ej. 10.10.0.10,10.10.0.11 (el DNS de tu dominio)"></label>
+          <label class="check"><input type="checkbox" name="system_dns"> Usar el resolvedor DNS del sistema (<code>--system-dns</code>)</label>
+          <label class="check"><input type="checkbox" name="unprivileged"> Modo sin privilegios (<code>--unprivileged</code>):
+            sin avisos de UAC, pero sin MACs, ARP ni <code>-O</code></label>
+          <div class="row"><button type="submit" class="primary">Guardar</button></div>
+        </form>
+        <div class="card">
+          <div class="card-head"><h2>Diagnóstico</h2><button id="diag-refresh" class="ghost">Actualizar</button></div>
+          <div id="diag"></div>
+        </div>
+      </div>
+      <div class="card danger-zone">
+        <h2>Zona peligrosa</h2>
+        <p class="muted">Borra todos los equipos, puertos, historial de IPs y novedades (no borra tareas, redes ni alertas).</p>
+        <button id="inventory-clear" class="danger">Borrar inventario</button>
+      </div>
+    </section>
+  </main>
+</div>
+
+<datalist id="target-suggestions"></datalist>
+<div class="drawer-backdrop hidden" id="drawer-backdrop"></div>
+<aside class="drawer hidden" id="drawer" aria-live="polite"></aside>
+<div id="toasts"></div>
+<script src="/static/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE nmaprun>
+<nmaprun scanner="nmap" args="nmap -sL -oX list.xml 10.10.0.0/29" start="1790604423" startstr="Mon Sep 28 16:07:03 2026" version="7.95" xmloutputversion="1.05">
+<verbose level="0"/>
+<debugging level="0"/>
+<host><status state="unknown" reason="user-set" reason_ttl="0"/>
+<address addr="10.10.0.0" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+</host>
+<host><status state="unknown" reason="user-set" reason_ttl="0"/>
+<address addr="10.10.0.1" addrtype="ipv4"/>
+<hostnames>
+<hostname name="gw.empresa.local" type="PTR"/>
+</hostnames>
+</host>
+<host><status state="unknown" reason="user-set" reason_ttl="0"/>
+<address addr="10.10.0.2" addrtype="ipv4"/>
+<hostnames>
+<hostname name="PC-JUAN.empresa.local" type="PTR"/>
+</hostnames>
+</host>
+<host><status state="unknown" reason="user-set" reason_ttl="0"/>
+<address addr="10.10.0.3" addrtype="ipv4"/>
+<hostnames>
+<hostname name="impresora-2p.empresa.local" type="PTR"/>
+</hostnames>
+</host>
+<host><status state="unknown" reason="user-set" reason_ttl="0"/>
+<address addr="10.10.0.4" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+</host>
+<runstats><finished time="1790604425" timestr="Mon Sep 28 16:07:05 2026" summary="Nmap done at Mon Sep 28 16:07:05 2026; 8 IP addresses (0 hosts up) scanned in 2.01 seconds" elapsed="2.01" exit="success"/><hosts up="0" down="0" total="8"/>
+</runstats>
+</nmaprun>

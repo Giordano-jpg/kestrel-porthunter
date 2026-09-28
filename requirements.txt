@@ -1,0 +1,4 @@
+flask>=3.0
+scapy>=2.5
+# Ventana de escritorio (WebView2). En Linux es opcional y necesita GTK o Qt: pip install pywebview[qt]
+pywebview>=5; sys_platform == "win32"
