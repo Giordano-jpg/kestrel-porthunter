@@ -1,0 +1,8 @@
+# Finales de línea: LF dentro del repositorio; git convierte al descargar según el sistema.
+* text=auto
+
+# Los scripts de Linux siempre con LF (con CRLF fallan: "bad interpreter").
+*.sh text eol=lf
+
+# Los .bat siempre con CRLF, que es lo que espera cmd.exe.
+*.bat text eol=crlf
